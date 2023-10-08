@@ -33,3 +33,6 @@ https://gist.github.com/gilbertalgordo
 [![CodeQL](https://github.com/gilbertalgordo/nextdns/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/gilbertalgordo/nextdns/actions/workflows/github-code-scanning/codeql)
 
 [![PSScriptAnalyzer](https://github.com/gilbertalgordo/nextdns/actions/workflows/powershell.yml/badge.svg)](https://github.com/gilbertalgordo/nextdns/actions/workflows/powershell.yml)
+
+# Pay Transparency
+https://acrobat.adobe.com/link/track?uri=urn:aaid:scds:US:3904d473-0113-3d87-82e8-1c8faf4c8a8d
