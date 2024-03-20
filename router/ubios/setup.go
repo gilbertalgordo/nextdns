@@ -17,8 +17,18 @@ type Router struct {
 	ClientReporting bool
 }
 
+func isUnifi() bool {
+	if st, _ := os.Stat("/data/unifi"); st != nil && st.IsDir() {
+		return true
+	}
+	if err := exec.Command("ubnt-device-info", "firmware").Run(); err == nil {
+		return true
+	}
+	return false
+}
+
 func New() (*Router, bool) {
-	if st, _ := os.Stat("/data/unifi"); st == nil || !st.IsDir() {
+	if !isUnifi() {
 		return nil, false
 	}
 	return &Router{
@@ -27,7 +37,14 @@ func New() (*Router, bool) {
 	}, true
 }
 
+func (r *Router) String() string {
+	return "ubios"
+}
+
 func (r *Router) Configure(c *config.Config) error {
+	if dnsFilterEnabled() {
+		return fmt.Errorf(`UDM "Content Filtering" feature is enabled. Please disable it to use NextDNS`)
+	}
 	c.Listens = []string{net.JoinHostPort("localhost", r.ListenPort)}
 	r.ClientReporting = c.ReportClientInfo
 	if c.CacheSize == "0" || c.CacheSize == "" {
@@ -53,6 +70,11 @@ func (r *Router) setupDNSMasq() error {
 		return err
 	}
 	return killDNSMasq()
+}
+
+func dnsFilterEnabled() bool {
+	_, err := os.Stat("/run/dnsfilter/dnsfilter")
+	return err == nil
 }
 
 func killDNSMasq() error {

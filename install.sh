@@ -98,8 +98,27 @@ uninstall() {
     fi
 }
 
+precheck() {
+    if [ -e "/data/unifi" ] && [ -f "/run/dnsfilter/dnsfilter" ]; then
+        log_warn "UDM Content Filtering and/or Ad Blocking feature is enabled."
+        log_warn "Please disable it to use NextDNS."
+        log_warn ""
+        log_warn "  To disable Content Filtering, go to Settings > Network."
+        log_warn "  For each network, set the Content Filtering feature to None."
+        log_warn ""
+        log_warn "  To disable Ad Blocking, go to Settings > Application Firewall"
+        log_warn "  In the General tab, uncheck the Ad Blocking checkbox."
+        log_warn ""
+        while [ -f "/run/dnsfilter/dnsfilter" ]; do
+            sleep 1
+        done
+        log_info "Content Filtering feature successfully disabled."
+    fi
+}
+
 configure() {
     log_debug "Start configure"
+    precheck
     args=""
     add_arg() {
         for value in $2; do
@@ -283,7 +302,7 @@ install_deb() {
         (dpkg --compare-versions $(dpkg-query --showformat='${Version}' --show apt) ge 1.1 ||
          asroot ln -s /etc/apt/keyrings/nextdns.gpg /etc/apt/trusted.gpg.d/.) &&
         (test "$OS" = "debian" && asroot apt-get -y install apt-transport-https || true) &&
-        asroot apt-get update &&
+        (asroot apt-get update || true) &&
         asroot apt-get install -y nextdns
 }
 
@@ -298,7 +317,7 @@ install_deb_keyring() {
 
 upgrade_deb() {
     install_deb_keyring &&
-        asroot apt-get update &&
+        (asroot apt-get update || true) &&
         asroot apt-get install -y nextdns
 }
 
@@ -477,7 +496,7 @@ ubios_install_source() {
     podman exec unifi-os apt-get install -y gnupg1 curl
     podman exec unifi-os mkdir -p /etc/apt/keyrings/
     podman exec unifi-os curl -sfL https://repo.nextdns.io/nextdns.gpg -o /etc/apt/keyrings/nextdns.gpg
-    podman exec unifi-os apt-get update -o Dir::Etc::sourcelist="sources.list.d/nextdns.list" -o Dir::Etc::sourceparts="-" -o APT::Get::List-Cleanup="0"
+    podman exec unifi-os apt-get update -o Dir::Etc::sourcelist="sources.list.d/nextdns.list" -o Dir::Etc::sourceparts="-" -o APT::Get::List-Cleanup="0" || true
 }
 
 install_ubios() {
@@ -664,6 +683,10 @@ log_debug() {
 
 log_info() {
     printf "INFO: %s\n" "$*" >&2
+}
+
+log_warn() {
+    printf "\033[33mWARN: %s\033[0m\n" "$*" >&2
 }
 
 log_error() {
@@ -916,7 +939,7 @@ detect_os() {
             # shellcheck disable=SC1091
             for dist in $(. /etc/os-release; echo "$ID_LIKE"); do
                 case $dist in
-                debian|ubuntu|rhel|fedora|openwrt)
+                debian|ubuntu|rhel|fedora|openwrt|arch)
                     log_debug "Using ID_LIKE"
                     echo "$dist"; return 0
                     ;;
@@ -1015,9 +1038,9 @@ bin_location() {
         ;;
     synology)
         echo "/usr/local/bin/nextdns"
-	;;
+    ;;
     darwin)
-	echo "$(brew --prefix 2>/dev/null || echo /usr/local)/bin/nextdns"
+        echo "$(brew --prefix 2>/dev/null || echo /usr/local)/bin/nextdns"
         ;;
     asuswrt-merlin|ddwrt)
         echo "/jffs/nextdns/nextdns"
