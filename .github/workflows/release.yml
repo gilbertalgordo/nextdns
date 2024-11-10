@@ -1,7 +1,7 @@
 name: Release
 
 on:
-  create:
+  push:
     tags:
       - v*
 
@@ -17,7 +17,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: "1.21.5"
+          go-version: "1.22.2"
       - name: Test
         run: go test ./...
       - name: Run GoReleaser
@@ -30,7 +30,7 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist
@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download Build Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist
@@ -148,7 +148,7 @@ jobs:
           echo "::group::Create APK index files"
           (
             cd r/apk
-            docker run --rm -w $PWD -v $PWD:$PWD alpine:latest sh -c '
+            docker run --rm -w $PWD -v $PWD:$PWD alpine:3.19 sh -c '
               for arch in */; do
                 echo "Indexing $arch"
                 (
@@ -182,7 +182,7 @@ jobs:
           echo "::endgroup::"
 
           echo "::group::Signing APK repository"
-          docker run --rm -w $PWD -v $PWD:$PWD -v /tmp/nextdns:/tmp/nextdns alpine:latest sh -c '
+          docker run --rm -w $PWD -v $PWD:$PWD -v /tmp/nextdns:/tmp/nextdns alpine:3.19 sh -c '
             apk add alpine-sdk
             cd apk
             for arch in */; do
@@ -198,11 +198,15 @@ jobs:
         run: |
           cd dist
           aws s3 sync --no-progress --exclude "*" --include "*.deb" --include "*.rpm" --include "*.apk" \
-            --storage-class REDUCED_REDUNDANCY --acl public-read r/ s3://${AWS_BUCKET}/
+            --storage-class REDUCED_REDUNDANCY --acl public-read \
+            r/ s3://${AWS_BUCKET}/
           aws s3 sync --no-progress \
-            --storage-class REDUCED_REDUNDANCY --acl public-read r/ s3://${AWS_BUCKET}/
+            --storage-class REDUCED_REDUNDANCY --acl public-read \
+            --cache-control "max-age=300, must-revalidate" \
+            r/ s3://${AWS_BUCKET}/
           aws s3 sync --no-progress --delete \
-            --storage-class REDUCED_REDUNDANCY --acl public-read r/ s3://${AWS_BUCKET}/
+            --storage-class REDUCED_REDUNDANCY --acl public-read \
+            r/ s3://${AWS_BUCKET}/
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.S3_REPO_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_REPO_SECRET }}

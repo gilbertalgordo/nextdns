@@ -18,7 +18,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: "1.21.5"
+          go-version: "1.22.2"
       - name: Test
         run: go test ./...
       - name: Run GoReleaser
@@ -38,7 +38,7 @@ jobs:
           echo -n ${{ github.event.number }} > dist/PR
           echo -n ${{ github.event.pull_request.head.sha }} > dist/SHA
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
